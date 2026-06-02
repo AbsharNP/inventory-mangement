@@ -57,7 +57,7 @@ New-Item database/database.sqlite -ItemType File
 Then set:
 
 ```env
-DB_CONNECTION=sqlite
+DB_CONNECTION=mysql
 ```
 
 4. Run migrations and seed sample data:
