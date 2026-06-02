@@ -1,0 +1,315 @@
+{
+    "info": {
+        "name": "Inventory Management & Dynamic Pricing API",
+        "description": "RESTful Laravel API for managing products, warehouses, and stock with dynamic pricing.\n\n## Authentication\nAll endpoints (except login) require a Bearer token.\n\n## Quick Start\n1. Run the **Login** request first to get a token\n2. The token is auto-saved to the collection variable `{{token}}`\n3. All other requests use this token automatically",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:8000/api",
+            "type": "string"
+        },
+        {
+            "key": "token",
+            "value": "",
+            "type": "string"
+        }
+    ],
+    "item": [
+        {
+            "name": "Authentication",
+            "item": [
+                {
+                    "name": "Login",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('token', jsonData.token);",
+                                    "    pm.test('Login successful', function () {",
+                                    "        pm.expect(jsonData.message).to.eql('Login successful.');",
+                                    "        pm.expect(jsonData.token).to.be.a('string');",
+                                    "    });",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"admin@example.com\",\n    \"password\": \"password\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/login",
+                            "host": ["{{base_url}}"],
+                            "path": ["login"]
+                        },
+                        "description": "Authenticate and receive a Sanctum bearer token.\n\n**Demo Credentials:**\n- Email: `admin@example.com`\n- Password: `password`"
+                    }
+                },
+                {
+                    "name": "Logout",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/logout",
+                            "host": ["{{base_url}}"],
+                            "path": ["logout"]
+                        },
+                        "description": "Revoke the current access token."
+                    }
+                }
+            ],
+            "description": "Login to get a bearer token. The token is automatically saved to collection variables."
+        },
+        {
+            "name": "Products",
+            "item": [
+                {
+                    "name": "List Products (with Dynamic Pricing)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Products retrieved successfully', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.expect(jsonData.products).to.be.an('array');",
+                                    "    pm.expect(jsonData.products.length).to.be.greaterThan(0);",
+                                    "    // Verify pricing structure",
+                                    "    var product = jsonData.products[0];",
+                                    "    pm.expect(product.pricing).to.have.property('base_price');",
+                                    "    pm.expect(product.pricing).to.have.property('adjusted_price');",
+                                    "    pm.expect(product.pricing).to.have.property('pricing_rule');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/products",
+                            "host": ["{{base_url}}"],
+                            "path": ["products"]
+                        },
+                        "description": "Get all products with dynamically calculated prices.\n\n**Pricing Rules Applied:**\n- Stock < 10 units: +30% (scarcity premium)\n- Stock 10–50 units: +10% (moderate supply)\n- Stock 51–100 units: Base price\n- Stock > 100 units: -20% (overstock discount)\n- Expiring within 7 days: -25% on those units"
+                    }
+                }
+            ],
+            "description": "Product listing with dynamic pricing applied based on stock levels and expiration."
+        },
+        {
+            "name": "Stock Management",
+            "item": [
+                {
+                    "name": "Create / Update Stock",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Stock created or updated', function () {",
+                                    "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.expect(jsonData.stock).to.have.property('quantity');",
+                                    "    pm.expect(jsonData.stock).to.have.property('product');",
+                                    "    pm.expect(jsonData.stock).to.have.property('warehouse');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"product_id\": 1,\n    \"warehouse_id\": 1,\n    \"quantity\": 50,\n    \"expires_at\": \"2026-07-15 00:00:00\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/stock",
+                            "host": ["{{base_url}}"],
+                            "path": ["stock"]
+                        },
+                        "description": "Create or update a stock record for a product in a specific warehouse.\n\nUses `updateOrCreate` — if a record with the same `product_id` + `warehouse_id` exists, it updates it. Otherwise, it creates a new one.\n\n**Validation:**\n- `product_id`: required, must exist\n- `warehouse_id`: required, must exist\n- `quantity`: required, integer >= 0\n- `expires_at`: optional, must be a future date"
+                    }
+                },
+                {
+                    "name": "Create Stock (Validation Error Example)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"product_id\": 9999,\n    \"warehouse_id\": 1,\n    \"quantity\": -5\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/stock",
+                            "host": ["{{base_url}}"],
+                            "path": ["stock"]
+                        },
+                        "description": "Example showing validation errors:\n- Invalid `product_id` (doesn't exist)\n- Negative `quantity`"
+                    }
+                }
+            ],
+            "description": "Create or update stock records linking products to warehouses."
+        },
+        {
+            "name": "Warehouse Reports",
+            "item": [
+                {
+                    "name": "Warehouse Report (ID: 1)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Report generated successfully', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.expect(jsonData.warehouse).to.have.property('id');",
+                                    "    pm.expect(jsonData.summary).to.have.property('total_products');",
+                                    "    pm.expect(jsonData.summary).to.have.property('total_quantity');",
+                                    "    pm.expect(jsonData).to.have.property('near_expiring');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/warehouses/1/report",
+                            "host": ["{{base_url}}"],
+                            "path": ["warehouses", "1", "report"]
+                        },
+                        "description": "Dashboard-style report for Warehouse #1 (Mumbai Central).\n\nShows:\n- Total products and quantity\n- Per-product breakdown\n- Near-expiring items (within 7 days) with days remaining"
+                    }
+                },
+                {
+                    "name": "Warehouse Report (ID: 3 — Near Expiring Demo)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/warehouses/3/report",
+                            "host": ["{{base_url}}"],
+                            "path": ["warehouses", "3", "report"]
+                        },
+                        "description": "Warehouse #3 (Bangalore Tech Hub) has near-expiring items — demonstrates the expiry highlighting feature."
+                    }
+                },
+                {
+                    "name": "Warehouse Report (Not Found)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/warehouses/999/report",
+                            "host": ["{{base_url}}"],
+                            "path": ["warehouses", "999", "report"]
+                        },
+                        "description": "Example of a 404 response when the warehouse ID does not exist."
+                    }
+                }
+            ],
+            "description": "Dashboard-style reports showing stock availability, quantities, and near-expiring items per warehouse."
+        }
+    ]
+}
